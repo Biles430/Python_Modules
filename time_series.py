@@ -359,3 +359,32 @@ def spectra(data, delta):
     F = J/(K*delta)
 
     return(F,S)
+
+#####################################################################
+#############   Whittacker Smoother   ###############################
+#   FUNCTION
+#This function takes in a vector and a smoothing parameter and produces a 
+#smoothed vector
+#   NOTES
+# Taken from: GITHUB: zmeri/gist:3c43d3b98a00c02f81c2ab1aaacc3a49
+#Reference: Paul H. C. Eilers. "A Perfect Smoother". 
+#	Analytical Chemistry, 2003, 75 (14), pp 3631–3636
+#   UPDATED: 3-09-2017
+# INPUTS
+#y = data
+#lmda = smoothing paramter
+# OUTPUTS
+#z = smoothed dataset
+#   NOTES
+#
+#
+def whitsm(y, lmda):
+  m = len(y)
+  E = sp.sparse.identity(m)
+  d1 = -1 * np.ones((m),dtype='d')
+  d2 = 3 * np.ones((m),dtype='d')
+  d3 = -3 * np.ones((m),dtype='d')
+  d4 = np.ones((m),dtype='d')
+  D = sp.sparse.diags([d1,d2,d3,d4],[0,1,2,3], shape=(m-3, m), format="csr")
+  z = sp.sparse.linalg.cg(E + lmda * (D.transpose()).dot(D), y)
+  return z[0]
