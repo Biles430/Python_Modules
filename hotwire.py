@@ -72,7 +72,7 @@ def probe_height(L, H, N):
 #   FUNCTION
 #This function will compute the boundary layer thickness using the 99% method
 #Note it is for Twall > Tair
-#   UPDATED: 3-20-2016
+#   UPDATED: 4-06-2017
 #   INPUTS
 #data = set of mean data values at each position x
 #x = wall normal positions
@@ -81,16 +81,19 @@ def probe_height(L, H, N):
 #   UPDATES
 #Need to change such that it can caluculate Twall>Tair or for Twall<Tair
 
-def delta(data, x, U_inf):
+def delta(data, x, U_inf, threshold):
+    #create place holder
     temp_delta = 0
+    #set thresholding value ie .99, .95
+    thershold = threshold
     N = len(data)
     temp = data/U_inf
     for j in range(1,N):
         # #0 -> 1
-        if temp[j] >= .99:
-            if temp[j-1] <= .99:
+        if temp[j] >= thershold:
+            if temp[j-1] <= threshold:
                 #interpolate to find true value
-                temp_delta = (.99-temp[j-1])/(temp[j]-temp[j-1])*(x[j]-x[j-1])+x[j-1]
+                temp_delta = (threshold-temp[j-1])/(temp[j]-temp[j-1])*(x[j]-x[j-1])+x[j-1]
                 break
     return(temp_delta)
 
