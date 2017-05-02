@@ -192,3 +192,39 @@ def spatial_avg(data, y_pos, probe_diam, walloffset):
                 pos  = j
                 break
     return(probe_pos, data_avg)
+
+#############################################################################
+####################  Perform differentiation on dataset  #####################
+#   FUNCTION
+#This function performs a differentiation based on the provided inputs. It utilizes a
+# richardson nonunifrom approach as recommended by Dr. Ebadi
+#   UPDATED: 05-02-17
+#   INPUTS
+#x= x of dataset
+#y = y of dataset
+#   OUTPUTS,
+#dydx = differentiated dataset
+#   NOTES
+
+def richardson(x,y):
+    y = np.array(y)
+    x = np.array(x)
+    m = np.size(y)
+    dydx = np.zeros(m)
+    dydx[0] = (y[1] - y[0]) / (x[1] - x[0])
+    if m == 1:
+        dydx[-1] = dydx[0];
+    elif m < 5:
+        for i in range(1, len(y) - 2):
+            dydx[i] = (y[i + 1] - y[i - 1]) / (x[i + 1] - x[i - 1])
+        dydx[-1] = (y[-1] - y[-2]) / (x[-1] - x[-2])
+    else:
+        for i in range(1,3):
+            dydx[i] = (y[i + 1] - y[i - 1]) / (x[i + 1] - x[i - 1])
+        for i in range(3, m - 2):
+            dydx[i] = (-y[i + 2] + 8*y[i + 1] - 8*y[i - 1] + y[i - 2]) / (6*(x[i + 1] - x[i - 1]));
+        i = m - 2
+        dydx[i] = (y[i + 1] - y[i - 1]) / (x[i + 1] - x[i - 1]);
+        dydx[-1] = (y[-1] - y[-2]) / (x[-1] - x[-2]);
+
+    return dydx
