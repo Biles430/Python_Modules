@@ -228,3 +228,50 @@ def richardson(x,y):
         dydx[-1] = (y[-1] - y[-2]) / (x[-1] - x[-2]);
 
     return dydx
+
+#############################################################################
+####################  Perform shear based PST correction #####################
+#   FUNCTION
+#This function takes a correction factor from S.C.C. Bailey et al and applies it
+# to experimental PST datasets
+#   UPDATED: 05-18-17
+#   INPUTS
+#u= u of dataset
+#y = y of dataset
+#uinf = free stream velocity
+#Dp = diameter of PST
+#   OUTPUTS,
+#ynew = new y positions based on delta_y correction
+#   NOTES
+
+def pst_shear_correction(u, y, uinf, Dp):
+    ynew = np.zeros(len(y))
+    dudy = ((hw.richardson(y, u)**2)**(1/2)
+    alpha = (Dp/ (2*uinf) ) * dudy
+    delta_y = (.15 * np.tanh(4 * (alpha)**(1/2) ) ) * Dp
+    ynew = y + delta_y
+    return(ynew)
+
+#############################################################################
+####################  Perform new wall based PST correction #################
+#   FUNCTION
+#This function takes a correction factor from S.C.C. Bailey et al and applies it
+# to experimental PST datasets
+#   UPDATED: 05-18-17
+#   INPUTS
+#u= u of dataset
+#y = y of dataset
+#utau = friction velocity determined from dataset
+#Dp = diameter of PST
+#   OUTPUTS,
+#unew = shifted velocities 
+#   NOTES
+
+def pst_wall_correction(u, y, utau, Dp):
+    unew = np.zero(len(u))
+    dplus = (Dp*utau) / air_prop['nu']
+    udelta = (20*np.exp(-.1*dplus) + 1)*.015 * np.exp(-2.5* (y/Dp - .5))
+    unew = (1/ (1-udelta))*u
+    return(unew)
+
+
