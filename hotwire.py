@@ -245,8 +245,32 @@ def richardson(x,y):
 #   NOTES
 
 def pst_shear_correction(u, y, uinf, Dp):
+	#define richardson #
+    def richardson(x,y):
+        y = np.array(y)
+        x = np.array(x)
+        m = np.size(y)
+        dydx = np.zeros(m)
+        dydx[0] = (y[1] - y[0]) / (x[1] - x[0])
+        if m == 1:
+            dydx[-1] = dydx[0];
+        elif m < 5:
+            for i in range(1, len(y) - 2):
+                dydx[i] = (y[i + 1] - y[i - 1]) / (x[i + 1] - x[i - 1])
+            dydx[-1] = (y[-1] - y[-2]) / (x[-1] - x[-2])
+        else:
+            for i in range(1,3):
+                dydx[i] = (y[i + 1] - y[i - 1]) / (x[i + 1] - x[i - 1])
+            for i in range(3, m - 2):
+                dydx[i] = (-y[i + 2] + 8*y[i + 1] - 8*y[i - 1] + y[i - 2]) / (6*(x[i + 1] - x[i - 1]));
+            i = m - 2
+            dydx[i] = (y[i + 1] - y[i - 1]) / (x[i + 1] - x[i - 1]);
+            dydx[-1] = (y[-1] - y[-2]) / (x[-1] - x[-2]);
+
+        return dydx
+
     ynew = np.zeros(len(y))
-    dudy = ((hw.richardson(y, u)**2)**(1/2)
+    dudy = ((richardson(y, u)**2)**(1/2))
     alpha = (Dp/ (2*uinf) ) * dudy
     delta_y = (.15 * np.tanh(4 * (alpha)**(1/2) ) ) * Dp
     ynew = y + delta_y
@@ -267,9 +291,9 @@ def pst_shear_correction(u, y, uinf, Dp):
 #unew = shifted velocities 
 #   NOTES
 
-def pst_wall_correction(u, y, utau, Dp):
-    unew = np.zero(len(u))
-    dplus = (Dp*utau) / air_prop['nu']
+def pst_wall_correction(u, y, utau, Dp, nu):
+    unew = np.zeros(len(u))
+    dplus = (Dp*utau) / nu
     udelta = (20*np.exp(-.1*dplus) + 1)*.015 * np.exp(-2.5* (y/Dp - .5))
     unew = (1/ (1-udelta))*u
     return(unew)
