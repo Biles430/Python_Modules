@@ -5,6 +5,11 @@
 import pandas as pd
 from pandas import DataFrame
 import numpy as np
+#for whittacker smoother
+import scipy as sp
+import scipy.sparse
+import scipy.linalg
+from scipy.sparse.linalg import cg
 
 #############################################################################
 #################### Perform Discrete Fourier Transform #####################
@@ -388,3 +393,42 @@ def whitsm(y, lmda):
   D = sp.sparse.diags([d1,d2,d3,d4],[0,1,2,3], shape=(m-3, m), format="csr")
   z = sp.sparse.linalg.cg(E + lmda * (D.transpose()).dot(D), y)
   return z[0]
+#####################################################################
+#############   Richardson Nonuniform derivative   ###############################
+#   FUNCTION
+#This function computes the first derivative using the richardson method
+#   NOTES
+# Taken from: GITHUB: zmeri/gist:3c43d3b98a00c02f81c2ab1aaacc3a49
+#Reference: Paul H. C. Eilers. "A Perfect Smoother". 
+#	Analytical Chemistry, 2003, 75 (14), pp 3631–3636
+#   UPDATED: 08-10-2017
+# INPUTS
+#x = depentdent (time)
+#y = independent (data)
+# OUTPUTS
+#dydx = first derivative
+#   NOTES
+#
+
+def Richardson_nonunif(x,y):
+    y = np.array(y)
+    x = np.array(x)
+    m = np.size(y)
+    dydx = np.zeros(m)
+    dydx[0] = (y[1] - y[0]) / (x[1] - x[0])
+    if m == 1:
+        dydx[-1] = dydx[0];
+    elif m < 5:
+        for i in range(1, len(y) - 2):
+            dydx[i] = (y[i + 1] - y[i - 1]) / (x[i + 1] - x[i - 1])
+        dydx[-1] = (y[-1] - y[-2]) / (x[-1] - x[-2])
+    else:
+        for i in range(1,3):
+            dydx[i] = (y[i + 1] - y[i - 1]) / (x[i + 1] - x[i - 1])
+        for i in range(3, m - 2):
+            dydx[i] = (-y[i + 2] + 8*y[i + 1] - 8*y[i - 1] + y[i - 2]) / (6*(x[i + 1] - x[i - 1]));
+        i = m - 2
+        dydx[i] = (y[i + 1] - y[i - 1]) / (x[i + 1] - x[i - 1]);
+        dydx[-1] = (y[-1] - y[-2]) / (x[-1] - x[-2]);
+
+    return dydx
