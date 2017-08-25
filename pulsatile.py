@@ -11,6 +11,7 @@ import h5py
 from pylab import *
 from math import atan2
 import time_series as ts
+import math
 #######################################################
     #LAST UPDATED : 7-14-16
 #######################################################
@@ -122,27 +123,6 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
 
 
 def Phase_Avg(time, data1, data2, avg_freq, sample_freq, num_bins):
-	#Print iterations progress
-	def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█'):
-		"""
-		Call in a loop to create terminal progress bar
-		@params:
-		    iteration   - Required  : current iteration (Int)
-		    total       - Required  : total iterations (Int)
-		    prefix      - Optional  : prefix string (Str)
-		    suffix      - Optional  : suffix string (Str)
-		    decimals    - Optional  : positive number of decimals in percent complete (Int)
-		    length      - Optional  : character length of bar (Int)
-		    fill        - Optional  : bar fill character (Str)
-		"""
-		percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
-		filledLength = int(length * iteration // total)
-		bar = fill * filledLength + '-' * (length - filledLength)
-		print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end = '\r')
-		# Print New Line on Complete
-		if iteration == total:
-		    print()
-
 	#check to make sure there is hihg enough data resolution for number of bins selected
 	if 1/avg_freq/num_bins*sample_freq < 1:
 		print('Number of bins greater than sampling resolution, reduce num_bins')
@@ -152,21 +132,24 @@ def Phase_Avg(time, data1, data2, avg_freq, sample_freq, num_bins):
 	##create time vector based on overall time and bin width
 	time_ref = np.arange(0, 1/avg_freq+bin_width, bin_width)
 	##create reference trace signal which will be used to identify zero crossings
-	data_ref = data1 - np.mean(data1)
+	vel_width= int(sample_freq / avg_freq)
+	data_ref = data1 - np.nanmean(data1)
+	for k in range(vel_width, len(data1)-vel_width):
+		run_mean = np.mean(data1[k:k+vel_width])
+		data_ref[k] = data1[k] - run_mean
+	#data_ref = data1 - np.nanmean(data1)
 	#find first derivative
-	dydx_ref = ts.Richardson_nonunif(time, data1)
+	dydx_ref = ts.Richardson_nonunif(time, data_ref)
 	#length of data set
 	N = len(data1)
 	#find all upward zero crossings
 	zero_crossing = dict()
-	count  = 0
+	count22  = 0
 	for j in range(0, int(N)-1):
 		#find upward zero crossing
 		if data_ref[j] < 0 and data_ref[j+1] > 0 and dydx_ref[j] > 0:
-			zero_crossing[count] = j
-			count+=1
-	#setup progressbar
-	printProgressBar(0, count*2, prefix = 'Finalizing Data:', suffix = 'Complete', length = 50)
+			zero_crossing[count22] = j
+			count22+=1
 	##########
 	###MEAN###
 	#find mean values
@@ -179,7 +162,7 @@ def Phase_Avg(time, data1, data2, avg_freq, sample_freq, num_bins):
 	data_bin2 = np.zeros(num_bins)
 	data_bin2_count = np.zeros(num_bins)
 	#step through all zero crossings to total-1 as below utilizes j to j+1
-	for j in range(0, count-1):
+	for j in range(0, count22-1):
 		#create a time vecotr based on data which can be compared to sinusoidal time
 		# in order to seperate data into bins
 		bin_time = time[zero_crossing[j]:zero_crossing[j+1]]-time[zero_crossing[j]]
@@ -191,14 +174,12 @@ def Phase_Avg(time, data1, data2, avg_freq, sample_freq, num_bins):
 			#exclude last point
 			for jjj in range(int(zero_crossing[j]), int(zero_crossing[j+1])-1): 
 				#determine if data time fits into ref time for chosen bin
-				if bin_time[jjj - int(zero_crossing[j])] > time_ref[jj] and bin_time[int(jjj - zero_crossing[j])] < time_ref[jj+1]:
+				if bin_time[jjj - int(zero_crossing[j])] > time_ref[jj] and bin_time[int(jjj - zero_crossing[j])] < time_ref[jj+1] and math.isnan(data2[jjj]) != True and math.isnan(data1[jjj]) != True:
 					#sum up data into appropriate bin
 					data_bin1[jj] = data1[jjj] + data_bin1[jj]
 					data_bin2[jj] = data2[jjj] + data_bin2[jj]
 					data_bin1_count[jj]+=1
 					data_bin2_count[jj]+=1
-		#update progress bar
-		printProgressBar(j, count*2, prefix = 'Binning Data:', suffix = 'Complete', length = 50)
 	#avg to find final phase avg values
 	data1_phaseavg = data_bin1/data_bin1_count
 	data2_phaseavg = data_bin2/data_bin2_count
@@ -214,7 +195,7 @@ def Phase_Avg(time, data1, data2, avg_freq, sample_freq, num_bins):
 	data_bin2 = np.zeros(num_bins)
 	data_bin2_count = np.zeros(num_bins)
 	#step through all zero crossings to total-1 as below utilizes j to j+1
-	for j in range(0, count-1):
+	for j in range(0, count22-1):
 		#create a time vecotr based on data which can be compared to sinusoidal time
 		# in order to seperate data into bins
 		bin_time = time[zero_crossing[j]:zero_crossing[j+1]]-time[zero_crossing[j]]
@@ -226,16 +207,19 @@ def Phase_Avg(time, data1, data2, avg_freq, sample_freq, num_bins):
 			#exclude last point
 			for jjj in range(int(zero_crossing[j]), int(zero_crossing[j+1])-1): 
 				#determine if data time fits into ref time for chosen bin
-				if bin_time[jjj - int(zero_crossing[j])] > time_ref[jj] and bin_time[int(jjj - zero_crossing[j])] < time_ref[jj+1]:
+				if bin_time[jjj - int(zero_crossing[j])] > time_ref[jj] and bin_time[int(jjj - zero_crossing[j])] < time_ref[jj+1] and math.isnan(data2[jjj]) != True and math.isnan(data1[jjj]) != True:
 					#sum up data into appropriate bin
 					data_bin1[jj] = (data1[jjj] - data1_phaseavg[jj])**2  + data_bin1[jj]
 					data_bin2[jj] = (data2[jjj] - data2_phaseavg[jj])**2 + data_bin2[jj]
 					data_bin1_count[jj]+=1
 					data_bin2_count[jj]+=1
-		#update progress bar
-		printProgressBar(j+count, count*2, prefix = 'Binning Data:', suffix = 'Complete', length = 50)
 	#avg to find final phase avg values
 	data1_phaseavg_prime = np.sqrt(data_bin1/data_bin1_count)
 	data2_phaseavg_prime = np.sqrt(data_bin2/data_bin2_count)
 	#print('Done!')
+	#flip axis so data is spit out as [phase, profile]
+	data1_phaseavg = np.transpose(data1_phaseavg)
+	data2_phaseavg = np.transpose(data2_phaseavg)
+	data1_phaseavg_prime = np.transpose(data1_phaseavg_prime)
+	data2_phaseavg_prime = np.transpose(data2_phaseavg_prime)
 	return [data1_phaseavg, data2_phaseavg, data1_phaseavg_prime, data2_phaseavg_prime]
