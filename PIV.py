@@ -72,7 +72,7 @@ def piv_readin(base_name_input, data_sets, sizex, sizey):
 #y_axis =
 #temp_u =
 #temp_v = 
-def piv_readin_mod(base_name_input, data_sets, sizex, sizey):
+def piv_readin_mod(base_name_input, file_name, data_sets, sizex, sizey):
     #Print iterations progress
     def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█'):
         """
