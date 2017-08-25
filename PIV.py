@@ -61,7 +61,7 @@ def piv_readin(base_name_input, data_sets, sizex, sizey):
 #column 3 = U velocity (m/sec)
 #column 4 = V velocity (m/sec)
 
-#UPDATED: 05-30-2017
+#UPDATED: 08-25-2017
 #INPUTS, 
 #base_name_input = Name of Folder with PIV data inside it
 #data_sets = number of data sets (txt files) in folder
@@ -182,3 +182,65 @@ def mask_loc(u):
     print('Mask Found!')
     return(mask)
 
+###########################################################
+############# Filter PIV images #####################
+#Function
+#this function will a piv image dataset and compute the a mean value based on the top
+# of the image. 
+#	1. compute avg of top of PIV image
+#	2. Remove images with ~zero mean (done so std is not skewed)
+#	3. Re-compute mean and then std based on top 1/3 of image
+#	4. Apply std filer
+#UPDATED: 08-25-2017
+#INPUTS, 
+#u_vel = mean u velocity field
+#v_vel = mean v velocity field
+#Uinfinity = expected uinfinity of piv images
+#sizey = vertical dimmension of image
+
+#OUTPUTS,
+#u_vel = mean u velocity field
+#v_vel = mean v velocity field
+#count = num of bad images
+
+#This function is used to set bad and non-physical images to a nan value
+def filt_images(u_vel, v_vel, Uinfinity, sizey):
+	#count number of bad images
+	count1 = 0
+	#initalize the mean values which images will be filtered on
+	Umean_top = np.zeros(len(u_vel))
+	#compute means for top of images after above zero filter has been applied
+	for j in range(0, len(u_vel[0,:])):
+		Umean_top[j] = np.mean(np.mean(u_vel[j, int(2*(sizey/3)):-1]))
+	####remove all images which have ~zero mean such that when STD filter is appled
+	# the average is not skewed to towards zero
+	for j in range(0, len(v_vel[0,:])):
+		if Umean_top[j] < Uinfinity/10:
+			u_vel[0, j] = np.nan
+			v_vel[0, j] = np.nan
+			count1+=1
+	#compute new means for top of images after above zero filter has been applied
+	for j in range(0, len(u_vel[0,:])):
+		Umean_top[j] = np.mean(np.mean(u_vel[j, int(2*(sizey/3)):-1]))
+	####Apply STD filter 
+	#number of times to iterate through STD filter   
+	num_loops = 4
+	#width of filter in STD
+	filter_width = 1
+	for k in range(0, num_loops):
+		#compute mean of top 1/3 of image for STD filtering
+		for j in range(0, len(u_vel[0,:])):
+			Umean_top[j] = np.mean(np.mean(u_vel[j, int(2*(sizey/3)):-1]))
+		#STD filter  
+		for j in range(0, len(u_vel[0,:])):
+			#remove images with average value less than avg - x*STD
+			if Umean_top[j] < np.nanmean(Umean_top) - filter_width * np.sqrt(np.nanvar(Umean_top)):
+				u_vel[0, j] = np.nan
+				v_vel[0, j] = np.nan
+				count1+=1
+			#remove images with average value greater than avg - x*STD
+			if Umean_top[j] > np.nanmean(Umean_top) + filter_width * np.sqrt(np.nanvar(Umean_top)):
+				u_vel[0, j] = np.nan
+				v_vel[0, j] = np.nan
+				count1+=1
+	return(u_vel, v_vel, count1)
