@@ -102,7 +102,8 @@ def piv_readin_mod(base_name_input, data_sets, sizex, sizey):
     printProgressBar(0, len(x_range), prefix = 'Reading In:', suffix = 'Complete', length = 50)
     for i in x_range:
         #create file name for each txt file
-        loc = base_name_input + '/B' + str('{0:05}'.format(i)) + '.txt'
+	#'/B' + str('{0:05}'.format(i)) + '.txt'
+        loc = base_name_input + file_name[i]
         #read in txt file but skip first row
         temp = pd.read_csv(loc, sep='\t', skiprows=1, header=None)
         #rename columns to designated davis output
