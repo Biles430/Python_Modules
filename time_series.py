@@ -112,8 +112,8 @@ def tanh_filt(cutoff_freq, N, delta1):
 #returndata = returndata[0] = bins
 #    = returndata[1] = counts
 
-def pdf1(data, bin_size, range1):
-    #data = DataFrame(data)
+def pdf(data, bin_size, range1):
+    data = np.array(data)
     mean1 = np.nanmean(data)
     var1 = np.nanvar(data)
     #set up bins
@@ -126,7 +126,7 @@ def pdf1(data, bin_size, range1):
     #step through bins
     for k in range(0, len(bins)-1):
         #for each bin count data in bin width
-        counts = len(data[np.logical_and(data > bins[k], data <= bins[k])])
+        counts[k] = len(data[np.logical_and(data > bins[k], data <= bins[k+1])])
 
     counts = counts/(counter)
     return(bins, counts)
@@ -168,7 +168,7 @@ def pdf1(data, bin_size, range1):
     return(bins, counts)
 
 #####################################################################
-#############   Compute Cross-Correlation  #####################
+#############   Compute Auto-Correlation  #####################
 #   FUNCTION
 #This function takes the input data and performs the autocorrelation for given # of lags
 #   NOTES
@@ -218,10 +218,11 @@ def autocorr(x, lags, delta):
 #For details ref notes pg50-51 coding
 #x,y must be the same length
 
-def cross_cor(x, y, lag, delta):
+def cross_cor_nan(x, y, lag, delta):
     #determine number of lag steps based on
     #lag and delta
-    lag_steps=lag/delta;
+    lag_steps=int(lag/delta)
+
     ## compute initial mean to subtract off
     x_mean = np.nanmean(x)
     y_mean = np.nanmean(y)
@@ -235,6 +236,7 @@ def cross_cor(x, y, lag, delta):
     pos_lag = 0
     #compute negative lag correlation
     #step through given lags
+    printProgressBar(0, int(lag_steps)*2, prefix = 'Computing Corr:', suffix = 'Complete', length = 50)
     for k in range(int(lag_steps), 0, -1):
         #initalize place holders
         sx=0
@@ -262,6 +264,7 @@ def cross_cor(x, y, lag, delta):
         Cor[0][count] = -k*delta;
         neg_lag+=1
         count+=1
+        printProgressBar(count, int(lag_steps)*2, prefix = 'Computing Corr:', suffix = 'Complete', length = 50)
     ##  compute positive lag correlation
     #step through given lags
     for k in range(0, int(lag_steps)+1):
@@ -289,6 +292,77 @@ def cross_cor(x, y, lag, delta):
         den = np.sqrt((sxx/counter)-(sx/counter)**2)*np.sqrt((syylag/counter)-(sylag/counter)**2);
         Cor[1][count] = num/den;
         Cor[0][count] = k*delta;
+        printProgressBar(count, int(lag_steps)*2, prefix = 'Computing Corr:', suffix = 'Complete', length = 50)
+        count+=1
+        pos_lag+=1
+    return(Cor)
+
+#####################################################################
+#############   Compute Cross-Correlation  #####################
+#   FUNCTION
+#This function takes the input data and creates a pdf based on input bin_size
+# and range1
+#   NOTES
+# Created From Hw#5 Time Series Analysis
+# For ref. see notes pg 50-51
+#   UPDATED: 08-22-2017
+##  INPUTS
+# x = data set 1
+# y = data set 2
+# lag = amount of time to lag up to (sec)
+# delta = sampling interval (sec)
+## OUTPUTS
+#Cor[0] = correlation from 0:lag
+#Cor[1] = amount of time lagged
+##  NOTES
+#Created from Hw#5 time series analysis
+#For details ref notes pg50-51 coding
+#x,y must be the same length
+
+def cross_cor(x, y, lag, delta):
+    #determine number of lag steps based on
+    #lag and delta
+    lag_steps=int(lag/delta)
+
+    ## compute initial mean to subtract off
+    x_mean = np.nanmean(x)
+    y_mean = np.nanmean(y)
+    x = x-x_mean
+    y = y-y_mean
+    # initalize return variable
+    Cor= np.zeros([2, 2*lag_steps+1])
+    ## COMPUTE CORRELATION
+    count=0
+    neg_lag = 0
+    pos_lag = 0
+    #compute positive lag correlation
+    #step through given lags
+    printProgressBar(0, int(lag_steps), prefix = 'Computing Corr:', suffix = 'Complete', length = 50)
+    ##  compute positive lag correlation
+    #step through given lags
+    for k in range(0, int(lag_steps)+1):
+        #initalize place holders
+        sx=0
+        sxx=0
+        sxy=0
+        sylag=0
+        syylag=0
+        counter=0
+        #step through time series
+        for j in range(0, len(x)-k):
+            #sum all parts
+            sx=x[j]+sx
+            sxx=x[j]*x[j]+sxx
+            sxy=x[j]*y[j+k]+sxy
+            sylag=y[j+k]+sylag
+            syylag=y[j+k]*y[j+k]+syylag
+            counter+=1
+        #caluclate cross-correl for each lag
+        num = (sxy/counter)-(sx/counter)*(sylag/counter)
+        den = np.sqrt((sxx/counter)-(sx/counter)**2)*np.sqrt((syylag/counter)-(sylag/counter)**2);
+        Cor[1][count] = num/den;
+        Cor[0][count] = k*delta;
+        printProgressBar(count, int(lag_steps), prefix = 'Computing Corr:', suffix = 'Complete', length = 50)
         count+=1
         pos_lag+=1
     return(Cor)
@@ -432,3 +506,31 @@ def Richardson_nonunif(x,y):
         dydx[-1] = (y[-1] - y[-2]) / (x[-1] - x[-2]);
 
     return dydx
+#####################################################################
+#############        PROGRESS BAR     ###############################
+#   FUNCTION
+#This function displays a progess bar for an interating operation
+#example:
+# initalize: printProgressBar(0, count, prefix = 'Finalizing Data:', suffix = 'Complete', length = 50)
+# itterate: printProgressBar(j, count, prefix = 'Binning Data:', suffix = 'Complete', length = 50)
+#where j is current position and count is final position
+
+def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█'):
+	"""
+	Call in a loop to create terminal progress bar
+	@params:
+	    iteration   - Required  : current iteration (Int)
+	    total       - Required  : total iterations (Int)
+	    prefix      - Optional  : prefix string (Str)
+	    suffix      - Optional  : suffix string (Str)
+	    decimals    - Optional  : positive number of decimals in percent complete (Int)
+	    length      - Optional  : character length of bar (Int)
+	    fill        - Optional  : bar fill character (Str)
+	"""
+	percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+	filledLength = int(length * iteration // total)
+	bar = fill * filledLength + '-' * (length - filledLength)
+	print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end = '\r')
+	# Print New Line on Complete
+	if iteration == total:
+	    print()
