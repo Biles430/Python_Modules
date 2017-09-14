@@ -96,6 +96,7 @@ def delta(data, x, U_inf, threshold, profile):
                     break
         delta_pos = j+1
     ##1 -> 0
+    threshold = 1+(1-threshold)
     if profile == 1:
         for j in range(1,N):
             if temp[j] <= threshold:
